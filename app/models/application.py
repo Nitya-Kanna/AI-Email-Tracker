@@ -1,5 +1,6 @@
 # app/models/application.py
 from sqlalchemy import Column, String, Text, Date, DateTime, Enum
+from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
 import enum
@@ -38,6 +39,9 @@ class Application(Base):
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationship
+    emails = relationship("Email", back_populates="application")
     
     def __repr__(self):
         return f"<Application {self.company_name} - {self.role_title}>"
