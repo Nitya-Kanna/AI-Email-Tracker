@@ -6,12 +6,11 @@ python-dotenv==1.2.1
 
 # AI SDKs
 openai==2.14.0
-google-genai==1.56.0
 
-# Google Auth & API (Unified for production)
+# Google Auth & API (for Gmail API only)
 google-api-python-client==2.187.0
 google-auth-oauthlib==1.2.3
-google-auth>=2.45.0,<3.0.0  # Updated to satisfy google-genai requirements
+google-auth==2.45.0
 
 # Database & Logic
 SQLAlchemy==2.0.45
