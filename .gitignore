@@ -1,14 +1,38 @@
+# Gmail OAuth credentials (sensitive - should not be in git)
 credentials.json
-venv/
 token.json
+
+# Python
 __pycache__/
-*.pyc
-.env
-*.db
-.DS_Store
-env.py
+*.py[cod]
+*$py.class
+*.so
+.Python
 venv/
 env/
 ENV/
 
-#checking 
+# Database files (local development)
+*.db
+*.sqlite
+*.sqlite3
+email_tracker.db
+
+# Environment variables
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Testing (optional - you might want to keep these in git)
+# test_*.py
+# gmail-test/
+
+# Setup scripts (optional - you might want to keep these)
+# setup_*.py
+# cli.py 
