@@ -10,7 +10,7 @@ openai==2.14.0
 # Google Auth & API (for Gmail API only)
 google-api-python-client==2.187.0
 google-auth-oauthlib==1.2.3
-google-auth==2.45.0
+google-auth>=2.15.0,<2.42.0,!=2.24.0,!=2.25.0
 
 # Database & Logic
 SQLAlchemy==2.0.45
