@@ -1,13 +1,16 @@
-# Web Framework
+# Web Framework & Server
 fastapi==0.127.0
 uvicorn==0.40.0
 python-dotenv==1.2.1
 
-# AI & API
+# AI SDKs
 openai==2.14.0
 google-genai==1.56.0
+
+# Google Auth & API (Unified for production)
 google-api-python-client==2.187.0
 google-auth-oauthlib==1.2.3
+google-auth==2.41.0  # Downgraded slightly to stay compatible with oauthlib 1.2.3
 
 # Database & Logic
 SQLAlchemy==2.0.45
