@@ -4,12 +4,20 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from app.config import settings
 
+# Determine if we're using PostgreSQL or SQLite
+is_postgres = settings.DATABASE_URL.startswith("postgresql://") or settings.DATABASE_URL.startswith("postgres://")
+
 # Create database engine
 # This is the "connection" to your database
-engine = create_engine(
-    settings.DATABASE_URL,
-    connect_args={"check_same_thread": False}  # Needed for SQLite
-)
+if is_postgres:
+    # PostgreSQL (Railway production)
+    engine = create_engine(settings.DATABASE_URL)
+else:
+    # SQLite (local development)
+    engine = create_engine(
+        settings.DATABASE_URL,
+        connect_args={"check_same_thread": False}  # Needed for SQLite
+    )
 
 # Session factory - creates database sessions
 # A session is like a "conversation" with the database

@@ -1,0 +1,198 @@
+# Email Tracker Project - Cursor Rules
+
+## Project Overview
+A job application email tracker that:
+- Tracks job applications in SQLite database using SQLAlchemy
+- Fetches emails from Gmail API and matches them to applications
+- Provides FastAPI backend (app/main.py)
+- Uses Alembic for database migrations
+
+## Project Structure
+```
+email-tracker/
+├── app/
+│   ├── models/          # SQLAlchemy models (Application, Email)
+│   ├── services/        # Business logic (GmailService)
+│   ├── api/             # FastAPI endpoints (future)
+│   ├── schemas/         # Pydantic schemas (future)
+│   ├── database.py      # Database setup (SessionLocal, Base)
+│   ├── config.py       # Settings (DATABASE_URL from .env)
+│   └── main.py          # FastAPI app
+├── alembic/             # Database migrations
+├── cli.py               # CLI commands (optional)
+├── credentials.json     # Gmail OAuth credentials (root)
+├── token.json           # Gmail OAuth token (root)
+└── email_tracker.db      # SQLite database
+```
+
+## Database Patterns
+
+### Models
+- **Primary Keys**: Always use `String(36)` with `default=lambda: str(uuid.uuid4())`
+- **UUIDs**: Import `uuid` and use `str(uuid.uuid4())` for IDs
+- **Timestamps**: Use `datetime.utcnow` for `created_at`, `updated_at` defaults
+- **Indexes**: Add indexes on frequently queried fields:
+  - Foreign keys (`application_id`)
+  - Search fields (`gmail_id`, `sender_email`, `company_keyword`)
+  - Status fields (`is_matched`, `status`)
+- **Relationships**: Always use `back_populates` for bidirectional relationships
+- **Imports**: Always import `Base` from `app.database`
+
+### Database Sessions
+- **Always use**: `SessionLocal()` from `app.database`
+- **Pattern**:
+  ```python
+  db = SessionLocal()
+  try:
+      # database operations
+      db.commit()
+  except Exception as e:
+      db.rollback()
+      raise
+  finally:
+      db.close()
+  ```
+- **Never**: Forget to close sessions in `finally` blocks
+
+### Model Example Pattern
+```python
+from sqlalchemy import Column, String, Text, DateTime
+from sqlalchemy.orm import relationship
+from datetime import datetime
+import uuid
+from app.database import Base
+
+class MyModel(Base):
+    __tablename__ = "my_table"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    # fields...
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # relationships
+    related_items = relationship("RelatedModel", back_populates="parent")
+```
+
+## Gmail Service Usage
+
+### Authentication
+- Credentials: `credentials.json` and `token.json` in **root directory**
+- Service handles authentication automatically
+- Use: `from app.services import GmailService` or `from app.services.gmail_service import GmailService`
+
+### Methods
+- `GmailService()` - Initializes and authenticates
+- `search(query, max_results=10)` - Search Gmail with any query
+- `get_message(gmail_id)` - Get full email details
+- `search_from_companies(keywords)` - Search from multiple companies
+
+### Example
+```python
+from app.services import GmailService
+
+gmail = GmailService()
+emails = gmail.search("from:meta.com", max_results=10)
+full_email = gmail.get_message(emails[0]['gmail_id'])
+```
+
+## Adding New Models
+
+1. **Create model** in `app/models/your_model.py`
+2. **Add to exports** in `app/models/__init__.py`:
+   ```python
+   from app.models.your_model import YourModel
+   __all__ = [..., "YourModel"]
+   ```
+3. **Import in Alembic** (`alembic/env.py`):
+   ```python
+   from app.models.your_model import YourModel
+   ```
+4. **Create migration**:
+   ```bash
+   alembic revision --autogenerate -m "description"
+   ```
+5. **Apply migration**:
+   ```bash
+   alembic upgrade head
+   ```
+
+## Code Style
+
+### Type Hints
+- **Always use type hints** for function parameters and returns
+- Use `Optional[Type]` for nullable values
+- Use `List[Type]`, `Dict[str, Type]` from `typing`
+
+### Documentation
+- **Docstrings** for all classes and public methods
+- Use triple-quoted strings with clear descriptions
+- Document parameters and return values
+
+### Error Handling
+- Always use try/except/finally for database operations
+- Always rollback on errors: `db.rollback()`
+- Always close sessions in `finally` blocks
+- Provide user-friendly error messages
+
+### Imports
+- Group imports: standard library, third-party, local
+- Use absolute imports: `from app.models import Application`
+- Import models from `app.models`, not individual files
+
+## Common Operations
+
+### Querying Applications
+```python
+from app.database import SessionLocal
+from app.models import Application
+
+db = SessionLocal()
+try:
+    apps = db.query(Application).filter(
+        Application.company_name.ilike("%meta%")
+    ).all()
+finally:
+    db.close()
+```
+
+### Creating Email Records
+```python
+from app.models import Email
+from datetime import datetime
+
+email = Email(
+    gmail_id="msg_123",
+    sender_email="recruiter@company.com",
+    subject="Interview Request",
+    body="Full email body...",
+    received_at=datetime.now(),
+    application_id=application.id
+)
+```
+
+### Matching Emails to Applications
+- Use `company_keyword` from Application to match sender domains
+- Set `application_id` on Email when matched
+- Set `is_matched=True` when successfully matched
+
+## FastAPI Patterns (Future)
+- Endpoints go in `app/api/`
+- Use Pydantic schemas from `app/schemas/`
+- Use `get_db()` dependency from `app.database`
+
+## Environment Variables
+- `DATABASE_URL` in `.env` file (read by `app.config.Settings`)
+- Default: SQLite database
+
+## Testing
+- Test scripts in root directory (e.g., `test_*.py`)
+- Use `SessionLocal()` for database operations in tests
+- Test GmailService with real credentials
+
+## When User Asks to:
+- **Add an application**: Create Application model instance, use SessionLocal, commit
+- **Search emails**: Use GmailService.search() or search_from_companies()
+- **Match emails**: Query applications by company_keyword, match to emails
+- **Query data**: Always use SessionLocal pattern, close in finally
+- **Add features**: Follow existing patterns, add to appropriate directory
+
