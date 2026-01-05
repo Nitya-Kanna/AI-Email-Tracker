@@ -2,7 +2,20 @@ Email Tracker to learn Backend Engineering (Job Application CRM)
 
 An automated backend service that bridges the gap between your Gmail inbox and your job search tracking. This system fetches recruiter emails, uses AI to classify their intent, and automatically updates the status of your applications.
 
-Current Automation: 
+## 🤖 The Automation Pipeline
 
-Gmail Inbox (Targeted Fetching)$$\downarrow$$Deduplication Engine (Checks gmail_id vs Database to prevent double-billing and data noise)$$\downarrow$$AI Classification Node (LLM analyzes Subject/Body to determine intent: Interview, Rejection, or Offer)$$\downarrow$$Relational Matcher (Extracts domain keywords to link the email to the correct Job Application record)$$\downarrow$$Status Progression Logic (Updates Application Status autonomously based on conversation stage)$$\downarrow$$Persistent Storage (Finalizes DB transaction and updates the User Dashboard)
+The system operates as a data refinery, moving raw communication from Gmail into structured, actionable insights.
 
+**Gmail Inbox** (Targeted Fetching via Keywords)
+&nbsp;&nbsp;&nbsp;&nbsp; ⬇️
+**Deduplication Engine** (Checks `gmail_id` to prevent double-processing)
+&nbsp;&nbsp;&nbsp;&nbsp; ⬇️
+**AI Classification** (LLM interprets intent: *Interview, Rejection, Offer, etc.*)
+&nbsp;&nbsp;&nbsp;&nbsp; ⬇️
+**Relational Matcher** (Links email to the correct Application via domain extraction)
+&nbsp;&nbsp;&nbsp;&nbsp; ⬇️
+**Status Progression** (Autonomously moves Application Status forward)
+&nbsp;&nbsp;&nbsp;&nbsp; ⬇️
+**Persistent Storage** (Finalizes database transaction and audit trail)
+
+---
