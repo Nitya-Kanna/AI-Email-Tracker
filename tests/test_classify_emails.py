@@ -8,6 +8,10 @@ This script:
 3. Stores them in the database
 4. Matches them to applications
 """
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from app.services.email_processor import EmailProcessor
 from app.database import SessionLocal
 from app.models.application import Application

@@ -5,6 +5,10 @@ Test using full EmailProcessor workflow
 This tests the complete workflow (fetch, classify, store, match) using
 the same code path that will be used in production.
 """
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from app.services.email_processor import EmailProcessor
 
 

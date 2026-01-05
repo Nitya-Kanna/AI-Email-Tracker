@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Test script to verify Application-Email relationship works"""
 
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from datetime import datetime, date
 from app.models.application import Application, ApplicationStatus
 from app.models.email import Email

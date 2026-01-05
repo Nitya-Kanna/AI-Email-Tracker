@@ -1,8 +1,8 @@
 """
 Gmail Service for fetching and searching emails via Gmail API
 
-This service handles authentication and provides methods to search,
-fetch, and process emails from Gmail.
+This service provides methods to search, fetch, and process emails from Gmail.
+Authentication is handled by GmailAuthenticator.
 """
 import os
 import re
@@ -10,104 +10,33 @@ import base64
 from typing import List, Dict, Optional
 from datetime import datetime
 
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-
-# Gmail API scopes
-SCOPES = [
-    'https://www.googleapis.com/auth/gmail.readonly',
-    'https://www.googleapis.com/auth/gmail.modify'  # Needed for watch
-]
+from app.services.gmail_authenticator import GmailAuthenticator
 
 
 class GmailService:
     """
     Service for interacting with Gmail API
     
-    Handles authentication and provides methods to search and fetch emails.
-    Uses credentials.json and token.json for OAuth authentication.
+    Provides methods to search and fetch emails.
+    Uses GmailAuthenticator for authentication.
     """
     
     def __init__(self, credentials_path: Optional[str] = None, token_path: Optional[str] = None):
         """
-        Initialize Gmail service and authenticate
+        Initialize Gmail service
         
         Args:
             credentials_path: Path to credentials.json (default: root directory)
             token_path: Path to token.json (default: root directory)
         """
-        # Set default paths to root directory
-        if credentials_path is None:
-            credentials_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'credentials.json')
-        if token_path is None:
-            token_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'token.json')
-        
-        self.credentials_path = credentials_path
-        self.token_path = token_path
-        self.service = self._authenticate()
-    
-    def _authenticate(self):
-        """
-        Authenticate with Gmail API and return service instance
-        
-        Returns:
-            Gmail API service object
-            
-        Raises:
-            FileNotFoundError: If credentials.json is not found
-            Exception: If authentication fails
-        """
-        creds = None
-        
-        # Check if credentials file exists
-        if not os.path.exists(self.credentials_path):
-            raise FileNotFoundError(
-                f"Credentials file not found at {self.credentials_path}. "
-                "Please download credentials.json from Google Cloud Console."
-            )
-        
-        # Load existing token if available
-        if os.path.exists(self.token_path):
-            try:
-                creds = Credentials.from_authorized_user_file(self.token_path, SCOPES)
-            except Exception as e:
-                print(f"Warning: Could not load token.json: {e}")
-        
-        # If no valid credentials, authenticate
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                # Refresh expired token
-                try:
-                    creds.refresh(Request())
-                except Exception as e:
-                    print(f"Warning: Could not refresh token: {e}")
-                    creds = None
-            
-            if not creds:
-                # Run OAuth flow
-                flow = InstalledAppFlow.from_client_secrets_file(self.credentials_path, SCOPES)
-                creds = flow.run_local_server(port=0)
-            
-            # Save credentials for next time
-            try:
-                with open(self.token_path, 'w') as token:
-                    token.write(creds.to_json())
-            except Exception as e:
-                print(f"Warning: Could not save token.json: {e}")
-        
-        # Build and return Gmail service
-        try:
-            service = build('gmail', 'v1', credentials=creds)
-            return service
-        except Exception as e:
-            raise Exception(f"Failed to build Gmail service: {e}")
+        # Use authenticator for authentication
+        self.authenticator = GmailAuthenticator(credentials_path, token_path)
+        self.service = self.authenticator.get_service()
     
     def search(self, query: str, max_results: int = 10) -> List[Dict]:
         """
-        Search Gmail with any query string
+        Search Gmail with any query string, and only searches the "from" field. 
         
         Args:
             query: Gmail search query (e.g., "from:example.com", "subject:interview")

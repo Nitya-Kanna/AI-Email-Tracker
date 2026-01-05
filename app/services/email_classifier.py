@@ -2,13 +2,24 @@
 Email Classifier Service using OpenAI
 
 Classifies recruiter emails into categories like interview requests,
-rejections, offers, etc.
+rejections, offers, etc. Includes rate limiting with tenacity.
 """
 import json
 import re
+import time
+import logging
 from typing import Dict, Optional
-from openai import OpenAI
+from openai import OpenAI, RateLimitError, APIError
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+)
 from app.config import settings
+
+# Set up logging for tenacity
+logger = logging.getLogger(__name__)
 
 
 class EmailClassifier:
@@ -29,16 +40,18 @@ class EmailClassifier:
         "other"                   # Other/uncategorized
     ]
     
-    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4o-mini"):
+    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4o-mini", requests_per_minute: int = 50):
         """
         Initialize the email classifier
         
         Args:
             api_key: OpenAI API key (defaults to OPENAI_API_KEY from config)
             model: OpenAI model to use (default: gpt-4o-mini)
+            requests_per_minute: Maximum requests per minute (default: 50)
         """
         self.api_key = api_key or settings.OPENAI_API_KEY
         self.model = model
+        self.requests_per_minute = requests_per_minute
         
         if not self.api_key:
             raise ValueError(
@@ -48,6 +61,63 @@ class EmailClassifier:
         
         # Initialize OpenAI client
         self.client = OpenAI(api_key=self.api_key)
+        
+        # Rate limiting: track request times (simple sliding window)
+        self.request_times = []
+    
+    def _wait_for_rate_limit(self):
+        """Simple rate limiting: wait if we're hitting the limit"""
+        now = time.time()
+        
+        # Remove requests older than 1 minute
+        self.request_times = [t for t in self.request_times if now - t < 60]
+        
+        # If we've hit the limit, wait
+        if len(self.request_times) >= self.requests_per_minute:
+            sleep_time = 60 - (now - self.request_times[0]) + 0.1  # Small buffer
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+                # Clean up after waiting
+                now = time.time()
+                self.request_times = [t for t in self.request_times if now - t < 60]
+        
+        # Record this request
+        self.request_times.append(time.time())
+    
+    @retry(
+        stop=stop_after_attempt(3),  # Retry up to 3 times
+        wait=wait_exponential(multiplier=1, min=2, max=60),  # Exponential backoff: 2s, 4s, 8s...
+        retry=retry_if_exception_type((RateLimitError, APIError)),  # Only retry on rate limit/API errors
+        reraise=True  # Re-raise the exception if all retries fail
+    )
+    def _call_openai(self, prompt: str) -> Dict[str, any]:
+        """
+        Call OpenAI API with retry logic
+        
+        This method is wrapped with tenacity for automatic retries.
+        """
+        # Wait for rate limit before making request
+        self._wait_for_rate_limit()
+        
+        # Get classification from OpenAI
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are an AI assistant that classifies job application emails from recruiters. Always respond with valid JSON only."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3  # Lower temperature for more consistent classifications
+        )
+        
+        result_text = response.choices[0].message.content
+        return self._parse_response(result_text)
     
     def classify(self, subject: str, body: str, sender: str = "") -> Dict[str, any]:
         """
@@ -68,30 +138,20 @@ class EmailClassifier:
         prompt = self._build_classification_prompt(subject, body, sender)
         
         try:
-            # Get classification from OpenAI
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are an AI assistant that classifies job application emails from recruiters. Always respond with valid JSON only."
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.3  # Lower temperature for more consistent classifications
-            )
-            
-            result_text = response.choices[0].message.content
-            result = self._parse_response(result_text)
-            
+            # Call OpenAI with retry logic (handled by tenacity)
+            result = self._call_openai(prompt)
             return result
             
+        except (RateLimitError, APIError) as e:
+            # If all retries failed, return fallback
+            logger.warning(f"OpenAI API error after retries: {e}")
+            return {
+                "email_type": "other",
+                "confidence": 0.0,
+                "reasoning": f"API error after retries: {str(e)}"
+            }
         except Exception as e:
-            # Fallback to "other" if classification fails
+            # Other errors - don't retry
             return {
                 "email_type": "other",
                 "confidence": 0.0,

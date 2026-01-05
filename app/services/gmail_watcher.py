@@ -2,7 +2,7 @@
 Gmail Watcher Service for setting up push notifications
 """
 from typing import List, Optional, Dict
-from app.services.gmail_service import GmailService
+from app.services.gmail_authenticator import GmailAuthenticator
 
 
 class GmailWatcher:
@@ -10,10 +10,20 @@ class GmailWatcher:
     Sets up Gmail push notifications via Google Cloud Pub/Sub
     """
     
-    def __init__(self):
-        """Initialize with Gmail service"""
-        self.gmail_service = GmailService()
-        self.service = self.gmail_service.service
+    def __init__(
+        self, 
+        credentials_path: Optional[str] = None, 
+        token_path: Optional[str] = None
+    ):
+        """
+        Initialize with Gmail authenticator
+        
+        Args:
+            credentials_path: Path to credentials.json (optional)
+            token_path: Path to token.json (optional)
+        """
+        self.authenticator = GmailAuthenticator(credentials_path, token_path)
+        self.service = self.authenticator.get_service()
     
     def setup_watch(
         self, 
