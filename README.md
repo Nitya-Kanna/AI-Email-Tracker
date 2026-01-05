@@ -6,16 +6,32 @@ An automated backend service that bridges the gap between your Gmail inbox and y
 
 The system operates as a data refinery, moving raw communication from Gmail into structured, actionable insights.
 
-**Gmail Inbox** (Targeted Fetching via Keywords)
-&nbsp;&nbsp;&nbsp;&nbsp; ⬇️
-**Deduplication Engine** (Checks `gmail_id` to prevent double-processing)
-&nbsp;&nbsp;&nbsp;&nbsp; ⬇️
-**AI Classification** (LLM interprets intent: *Interview, Rejection, Offer, etc.*)
-&nbsp;&nbsp;&nbsp;&nbsp; ⬇️
-**Relational Matcher** (Links email to the correct Application via domain extraction)
-&nbsp;&nbsp;&nbsp;&nbsp; ⬇️
-**Status Progression** (Autonomously moves Application Status forward)
-&nbsp;&nbsp;&nbsp;&nbsp; ⬇️
-**Persistent Storage** (Finalizes database transaction and audit trail)
 
----
+1. **Gmail Inbox**  
+   *Targeted fetching via keywords*
+
+   ⬇️
+
+2. **Deduplication Engine**  
+   *Checks `gmail_id` to prevent double-processing*
+
+   ⬇️
+
+3. **AI Classification**  
+   *LLM interprets intent: Interview, Rejection, Offer, etc.*
+
+   ⬇️
+
+4. **Relational Matcher**  
+   *Links email to the correct application via domain extraction*
+
+   ⬇️
+
+5. **Status Progression**  
+   *Autonomously moves application status forward*
+
+   ⬇️
+
+6. **Persistent Storage**  
+   *Finalizes database transaction and audit trail*
+
